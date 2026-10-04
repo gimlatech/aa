@@ -235,8 +235,7 @@ body { font-family: 'Heebo', sans-serif; background: #bfdbee; color: #0c1f4a; fo
     <div class="input-box">
       <textarea id="chat-input" rows="1"
         oninput="autoResize(this); onChatType();"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}">
-      </textarea>
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
       <button class="mic-btn" id="mic-btn" onclick="toggleMic()">🎤</button>
     </div>
     <label for="cam-input" class="cam-btn" id="cam-btn" style="display:none" title="זהה מכשיר">📷</label>
@@ -255,8 +254,17 @@ body { font-family: 'Heebo', sans-serif; background: #bfdbee; color: #0c1f4a; fo
     <div class="chips-label" id="os-chips-label">בחרו מערכת הפעלה:</div>
     <div class="chips-area" id="os-chips"></div>
   </div>
+  <!-- Topic chips (אפליקציות / ממשלתי / ניקיון) -->
+  <div id="topic-chips-wrap" class="hidden">
+    <div class="chips-label" id="topic-chips-label">או בחרו נושא:</div>
+    <div class="chips-area" id="topic-chips"></div>
+  </div>
+  <div id="sub-chips-wrap" class="hidden">
+    <div class="chips-label" id="sub-chips-label">בחרו מותג:</div>
+    <div class="chips-area" id="sub-chips"></div>
+  </div>
   <!-- Robot error code -->
-  <div id="error-row" class="hidden" style="display:none;align-items:center;gap:8px;background:#cde8f5;border:1.5px solid #7dd3fc;border-radius:10px;padding:4px 10px;margin-top:6px;">
+  <div id="error-row" style="display:none;align-items:center;gap:8px;background:#cde8f5;border:1.5px solid #7dd3fc;border-radius:10px;padding:4px 10px;margin-top:6px;">
     <label style="font-size:12px;color:#1a3a6e;white-space:nowrap">🚨 קוד שגיאה:</label>
     <input type="text" id="error-input" placeholder="Err6 / F2 / 004" autocomplete="off" spellcheck="false"
       style="flex:1;background:none;border:none;outline:none;font-size:15px;font-family:'Heebo',sans-serif;color:#0c1f4a;padding:4px 0;direction:ltr">
@@ -317,6 +325,80 @@ var APPS = {
     chips: false, cam: true, errorCode: true
   }
 };
+
+// ════════ נושאים לכל קטגוריה ════════
+var TOPICS = {
+  gtdh:  {label:'או בחרו אפליקציה:', items:['💬 WhatsApp','🎥 Zoom','📧 Gmail','👍 Facebook','🗺️ Google Maps','🖥️ AnyDesk','🌐 Chrome','📸 תמונות וגיבוי']},
+  gdsh:  {label:'או בחרו נושא:', items:['🏛️ ביטוח לאומי','💰 מס הכנסה','🏥 בריאות וקופות','🔑 כניסה לאתרי ממשלה','🧓 אזרחים ותיקים','🤝 רווחה וסיעוד','🚗 רישוי רכב','🏠 ארנונה']},
+  robot: {label:'או בחרו סוג מכשיר:', items:['🤖 רובוט שואב','🔋 שואב אלחוטי (מקל)','🔌 שואב עם כבל','🧽 שוטף רצפה','✋ שואב ידני קטן'],
+    sub: {
+      '🤖 רובוט שואב':        ['Roborock','Ecovacs','Dreame','iRobot Roomba','Xiaomi','Narwal','Samsung','אחר / לא יודעים'],
+      '🔋 שואב אלחוטי (מקל)': ['Dyson','Xiaomi','Dreame','Samsung','LG','Tineco','Shark','אחר / לא יודעים'],
+      '🔌 שואב עם כבל':       ['Electrolux','Philips','Bosch','Samsung','LG','Miele','Kärcher','אחר / לא יודעים'],
+      '🧽 שוטף רצפה':         ['Tineco','Dreame','Roborock','Kärcher','Dyson','Xiaomi','אחר / לא יודעים'],
+      '✋ שואב ידני קטן':      ['Dyson','Xiaomi','Black+Decker','Bosch','אחר / לא יודעים']
+    }}
+};
+
+function renderTopics(app) {
+  var wrap = document.getElementById('topic-chips-wrap');
+  var area = document.getElementById('topic-chips');
+  area.innerHTML = '';
+  var t = TOPICS[app];
+  if (!t) { wrap.classList.add('hidden'); return; }
+  document.getElementById('topic-chips-label').textContent = t.label;
+  t.items.forEach(function(item) {
+    var b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = item;
+    b.onclick = function(){ selectTopic(item, b); };
+    area.appendChild(b);
+  });
+  wrap.classList.remove('hidden');
+}
+
+function selectTopic(item, btn) {
+  document.querySelectorAll('#topic-chips .chip').forEach(function(c){ c.classList.remove('sel'); });
+  btn.classList.add('sel');
+  selectedTopic = item;
+  selectedBrand = null;
+  var t = TOPICS[currentApp];
+  var subWrap = document.getElementById('sub-chips-wrap');
+  var subArea = document.getElementById('sub-chips');
+  subArea.innerHTML = '';
+  if (t && t.sub && t.sub[item]) {
+    document.getElementById('sub-chips-label').textContent = item + ' — בחרו מותג:';
+    t.sub[item].forEach(function(brand) {
+      var b = document.createElement('button');
+      b.className = 'chip';
+      b.textContent = brand;
+      b.onclick = function(){ selectBrand(brand, b); };
+      subArea.appendChild(b);
+    });
+    subWrap.classList.remove('hidden');
+  } else {
+    subWrap.classList.add('hidden');
+    addBubble('bot','✅ <strong>'+escH(item)+'</strong> — ספרו לי מה צריך ואעזור 🎯');
+  }
+  chatHistory.push({role:'user', content:'הנושא: '+item});
+  chatHistory.push({role:'assistant', content:'בסדר, עוזר בנושא '+item});
+  document.getElementById('chat-input').focus();
+}
+
+var selectedTopic = null, selectedBrand = null;
+
+function selectBrand(brand, btn) {
+  selectedBrand = brand;
+  document.querySelectorAll('#sub-chips .chip').forEach(function(c){ c.classList.remove('sel'); });
+  btn.classList.add('sel');
+  var unknown = brand.indexOf('אחר') === 0;
+  var ctx = selectedTopic + (unknown ? '' : ' / ' + brand);
+  addBubble('bot','✅ <strong>'+escH(ctx)+'</strong> — '+
+    (unknown ? 'ספרו לי מה המכשיר ומה הבעיה, ואם אפשר — צלמו אותו 📷' : 'אם יודעים את שם הדגם, כתבו אותו. ספרו לי מה הבעיה ואעזור 🎯'));
+  chatHistory.push({role:'user', content: unknown ? 'המותג לא ידוע' : 'המותג: '+brand});
+  chatHistory.push({role:'assistant', content:'בסדר, עוזר עם '+ctx});
+  document.getElementById('chat-input').focus();
+}
 
 // ════════ מאגר ידע ════════
 var DB = {
@@ -387,6 +469,9 @@ function switchApp(app, btn) {
   // הצג/הסתר אלמנטים ייחודיים
   document.getElementById('device-chips-wrap').classList.toggle('hidden', app !== 'gth');
   document.getElementById('os-chips-wrap').classList.add('hidden');
+  renderTopics(app);
+  selectedTopic = null; selectedBrand = null;
+  document.getElementById('sub-chips-wrap').classList.add('hidden');
   var errRow = document.getElementById('error-row');
   errRow.style.display = app === 'robot' ? 'flex' : 'none';
   document.getElementById('cam-btn').style.display = app === 'robot' ? 'flex' : 'none';
@@ -426,6 +511,10 @@ function onChatType() {
   var q = document.getElementById('chat-input').value;
   var dw = document.getElementById('device-chips-wrap');
   var ow = document.getElementById('os-chips-wrap');
+  var tw = document.getElementById('topic-chips-wrap');
+  if (TOPICS[currentApp]) tw.classList.toggle('hidden', q.length > 0);
+  if (TOPICS[currentApp] && selectedTopic && TOPICS[currentApp].sub && TOPICS[currentApp].sub[selectedTopic])
+    document.getElementById('sub-chips-wrap').classList.toggle('hidden', q.length > 0);
   if (q.length > 0 && currentApp === 'gth') {
     dw.classList.add('hidden');
     ow.classList.add('hidden');
@@ -576,6 +665,9 @@ function sendMessage() {
   if (errCode) document.getElementById('error-input').value = '';
 
   // החזר chips
+  if (TOPICS[currentApp]) document.getElementById('topic-chips-wrap').classList.remove('hidden');
+  if (TOPICS[currentApp] && selectedTopic && TOPICS[currentApp].sub && TOPICS[currentApp].sub[selectedTopic])
+    document.getElementById('sub-chips-wrap').classList.remove('hidden');
   if (currentApp==='gth') {
     document.getElementById('device-chips-wrap').classList.remove('hidden');
     if (selectedDevice) document.getElementById('os-chips-wrap').classList.remove('hidden');
