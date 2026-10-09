@@ -783,7 +783,7 @@ var currentUserName  = '';
 
 // ── בדיקה ראשונית: האם יש session שמור? ──
 function initAuth() {
-  var saved = sessionStorage.getItem('gimlatech_user');
+  var saved = localStorage.getItem('gimlatech_user');
   if (saved) {
     try {
       var u = JSON.parse(saved);
@@ -791,7 +791,7 @@ function initAuth() {
       currentUserName  = u.name;
       unlockApp();
       return;
-    } catch(e) { sessionStorage.removeItem('gimlatech_user'); }
+    } catch(e) { localStorage.removeItem('gimlatech_user'); }
   }
   // אין session — הצג מסך נעילה (כבר מוצג כברירת מחדל)
   // טען Google GSI
@@ -885,7 +885,7 @@ function checkAuth(email, name) {
   .then(function(r){ return r.json(); })
   .then(function(data) {
     if (data.authorized === true) {
-      sessionStorage.setItem('gimlatech_user', JSON.stringify({email:email, name:name}));
+      localStorage.setItem('gimlatech_user', JSON.stringify({email:email, name:name}));
       logUsage(email, name, 'login');
       unlockApp();
     } else {
@@ -920,7 +920,7 @@ function showDenied(msg) {
 
 // ── התנתקות ──
 function signOut() {
-  sessionStorage.removeItem('gimlatech_user');
+  localStorage.removeItem('gimlatech_user');
   currentUserEmail = '';
   currentUserName  = '';
   document.getElementById('app-content').style.display = 'none';
